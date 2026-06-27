@@ -1,0 +1,38 @@
+steps:
+  # Build frontend
+  - name: 'node:18'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        cd frontend && npm ci && npm run build
+        rm -rf ../backend/src/main/resources/static
+        mkdir -p ../backend/src/main/resources/static
+        cp -r dist/* ../backend/src/main/resources/static/
+
+  # Build and push Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/zerohour', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/zerohour']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'zerohour'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/zerohour'
+      - '--region'
+      - 'asia-south1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '512Mi'
+
+images:
+  - 'gcr.io/$PROJECT_ID/zerohour'

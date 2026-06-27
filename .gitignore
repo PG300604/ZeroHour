@@ -1,0 +1,27 @@
+# Compiled class files
+backend/target/
+frontend/dist/
+
+# Dependencies
+frontend/node_modules/
+
+# IDE/Editor configurations
+.vscode/
+backend/.settings/
+backend/.classpath
+backend/.project
+backend/.factorypath
+.project
+
+# Log files
+*.log
+backend/hs_err_pid*.log
+
+# Sensitive Files / Keys (Crucial)
+backend/src/main/resources/firebase-service-account.json
+firebase-b64.txt
+.env
+
+# OS Files
+.DS_Store
+Thumbs.db

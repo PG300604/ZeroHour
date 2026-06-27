@@ -1,0 +1,83 @@
+# ⏰ ZeroHour — Multi-Agent AI Productivity Companion
+
+**ZeroHour** is a premium, multi-agent AI task management and crisis-response companion built for the **Vibe2Ship Hackathon (BlockseBlock)**. It helps professionals, students, and developers navigate tight deadlines, manage task priorities, sync with Google Calendar, and resolve time-crunches through an interactive, multimodal **Panic Mode**.
+
+---
+
+## 🚀 Live Production Links
+*   🌐 **Deployable Link (Hosted on Google Cloud)**: [https://zerohour-a84d3.web.app](https://zerohour-a84d3.web.app)
+*   ⚙️ **Backend API (Hosted on Railway)**: `https://mindful-nourishment-production-3ec0.up.railway.app`
+
+---
+
+## 🧠 Core Architecture: The 4-Agent Pipeline
+
+ZeroHour orchestrates a pipeline of four specialized AI agents to automate task management:
+
+```mermaid
+graph TD
+    User([User Task Input]) --> Planner[1. PlannerAgent]
+    Planner -- Generates Subtasks --> Prioritizer[2. PrioritizerAgent]
+    Prioritizer -- Sorts & Reasons Priorities --> Scheduler[3. SchedulerAgent]
+    Scheduler -- Syncs to Google Calendar --> Nudge[4. NudgeAgent]
+    Nudge -- Triggers Email Nudges --> Gmail[Gmail API]
+```
+
+1.  **PlannerAgent**: Breaks down complex tasks and deadlines into bite-sized, actionable subtasks with estimated durations.
+2.  **PrioritizerAgent**: Analyzes the subtasks alongside the user's workload to dynamically assign logical execution priorities.
+3.  **SchedulerAgent**: Evaluates the user's calendar constraints and automatically creates calendar slots via the **Google Calendar API**.
+4.  **NudgeAgent**: Monitores upcoming deadlines in real-time and sends customized email alerts via the **Gmail API** to prevent procrastination.
+
+---
+
+## 🚨 Panic Mode: Crisis Management Flow
+When users face a sudden crunch, **Panic Mode** acts as their virtual Chief of Staff:
+*   **Multimodal Attachment Analysis**: Upload syllabi, PDFs, or photos of assignments. ZeroHour's multimodal Gemini engine processes the content to extract milestones and deadlines instantly.
+*   **Gemini-Style History Sidebar**: Manage past crisis conversations. Easily create new chats, reload history, rename sessions inline, or delete logs.
+*   **Real-Time Agent Streams**: Watch the agents think, plan, and schedule live through Server-Sent Events (SSE).
+
+---
+
+## 🛠️ Technology Stack
+*   **Frontend**: React (JS), Tailwind CSS (Vanilla styling), Vite, Server-Sent Events.
+*   **Backend**: Java Spring Boot, Spring Security (OAuth2 with Google OIDC), WebFlux (Reactive Streams).
+*   **Database & Auth**: Firebase Firestore (NoSQL cloud persistence), Google Firebase Admin SDK.
+*   **Hosting**: Google Firebase Hosting (Frontend), Railway (Docker-based Backend).
+
+---
+
+## 🛡️ Security Hardening & Best Practices
+*   **CSRF Protection**: Spring Security generates double-submitted CSRF tokens stored in a secure cookie (`XSRF-TOKEN`) and validated on all mutating requests.
+*   **IDOR Mitigation**: Added resource ownership validation checks on all REST endpoints (e.g. notifications and task updates).
+*   **Native JNI Alpine Segfault Fix**: Switched JRE base images to standard glibc Debian JRE to resolve `netty-tcnative` JNI segmentation faults.
+
+---
+
+## 💻 Local Development Setup
+
+### Backend (Spring Boot)
+1. Navigate to the backend folder:
+   ```bash
+   cd backend
+   ```
+2. Configure your environment variables in `.env` (or let it fallback to default values):
+   ```properties
+   GOOGLE_CLIENT_ID=your-client-id
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   GEMINI_API_KEY=your-gemini-key
+   ```
+3. Run the backend:
+   ```bash
+   mvn spring-boot:run
+   ```
+
+### Frontend (React)
+1. Navigate to the frontend folder:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies and start the Vite dev server:
+   ```bash
+   npm install
+   npm run dev
+   ```
