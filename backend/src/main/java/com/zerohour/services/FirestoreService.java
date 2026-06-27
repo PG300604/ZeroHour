@@ -111,6 +111,7 @@ public class FirestoreService {
         map.put("orderIndex", subtask.getOrderIndex());
         map.put("priority", subtask.getPriority());
         map.put("priorityReason", subtask.getPriorityReason());
+        map.put("googleEventId", subtask.getGoogleEventId());
         return map;
     }
 
@@ -126,6 +127,7 @@ public class FirestoreService {
         map.put("sseSessionId", session.getSseSessionId());
         map.put("createdAt", session.getCreatedAt() != null ? Timestamp.of(session.getCreatedAt()) : Timestamp.now());
         map.put("title", session.getTitle());
+        map.put("parentTaskId", session.getParentTaskId());
         return map;
     }
 
@@ -215,6 +217,7 @@ public class FirestoreService {
         
         subtask.setPriority(doc.getString("priority"));
         subtask.setPriorityReason(doc.getString("priorityReason"));
+        subtask.setGoogleEventId(doc.getString("googleEventId"));
         return subtask;
     }
 
@@ -229,6 +232,7 @@ public class FirestoreService {
         session.setStatus(doc.getString("status"));
         session.setSseSessionId(doc.getString("sseSessionId"));
         session.setTitle(doc.getString("title"));
+        session.setParentTaskId(doc.getString("parentTaskId"));
         
         Boolean confirmed = doc.getBoolean("confirmed");
         session.setConfirmed(confirmed != null && confirmed);
@@ -550,6 +554,14 @@ public class FirestoreService {
             throw new RuntimeException("Error getting subtasks by panic session ID", e);
         }
         return subtasks;
+    }
+
+    public void deleteSubtask(String subtaskId) {
+        try {
+            firestore.collection(SUBTASKS_COLLECTION).document(subtaskId).delete().get();
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting subtask", e);
+        }
     }
 
     public void deleteSubtasksByTaskId(String taskId) {

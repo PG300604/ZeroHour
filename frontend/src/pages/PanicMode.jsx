@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Send, Loader2, Paperclip } from 'lucide-react';
 import { api } from '../services/api';
 import { subscribeToAgentStream } from '../services/sse';
@@ -21,6 +21,17 @@ const THINKING_QUOTES = [
 export default function PanicMode() {
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const taskIdFromUrl = searchParams.get('taskId');
+  const [targetTask, setTargetTask] = useState(null);
+
+  useEffect(() => {
+    if (taskIdFromUrl) {
+      api.getTask(taskIdFromUrl)
+        .then(t => setTargetTask(t))
+        .catch(err => console.error('Failed to load task context:', err));
+    }
+  }, [taskIdFromUrl]);
 
   // Flow State: 'chat' | 'thinking' | 'preview' | 'confirming_agents' | 'confirmed'
   const [flowState, setFlowState] = useState('chat');
@@ -295,6 +306,11 @@ export default function PanicMode() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('zerohour_onboarded');
+    window.location.href = api.logoutUrl;
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if ((!userInput.trim() && !attachment) || isSending) return;
@@ -317,7 +333,7 @@ export default function PanicMode() {
 
     try {
       if (!sessionId) {
-        const res = await api.startPanic(messageText, currentAttachment);
+        const res = await api.startPanic(messageText, currentAttachment, taskIdFromUrl);
         setSessionId(res.sessionId);
         setSseSessionId(res.sseSessionId);
         localStorage.setItem('zerohour_panic_session_id', res.sessionId);
@@ -550,6 +566,13 @@ export default function PanicMode() {
             Abort
           </button>
         </div>
+
+        {targetTask && (
+          <div className="w-full bg-white/5 border-b border-white/10 px-4 md:px-8 py-2 text-[10px] font-mono text-gray-400 flex items-center gap-2">
+            <span className="material-symbols-outlined text-xs text-[#FF453A] animate-spin">sync</span>
+            EMERGENCY RE-PLANNING FOR: <span className="text-white font-bold uppercase">{targetTask.title}</span>
+          </div>
+        )}
 
         <div className="flex-grow p-4 md:p-10 overflow-y-auto bg-transparent flex flex-col items-center">
           <div className="w-full max-w-[700px] pb-32">
@@ -793,6 +816,30 @@ export default function PanicMode() {
         </div>
 
       </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[#0D0D0D]/95 backdrop-blur-md border-t border-white/10 z-40 flex justify-around items-center md:hidden px-4 shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
+        <Link to="/dashboard" className="flex flex-col items-center gap-1 text-[#94a3b8] hover:text-white transition-all">
+          <span className="material-symbols-outlined text-lg">dashboard</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Core</span>
+        </Link>
+        <a href="https://calendar.google.com" target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 text-[#94a3b8] hover:text-white transition-all">
+          <span className="material-symbols-outlined text-lg">calendar_today</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Cal</span>
+        </a>
+        <Link to="/panic" className="flex flex-col items-center gap-1 text-[#FF453A] animate-pulse">
+          <span className="material-symbols-outlined text-lg">emergency</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase font-bold">Panic</span>
+        </Link>
+        <Link to="/settings" className="flex flex-col items-center gap-1 text-[#94a3b8] hover:text-white transition-all">
+          <span className="material-symbols-outlined text-lg">settings</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Set</span>
+        </Link>
+        <button onClick={handleLogout} className="flex flex-col items-center gap-1 text-[#94a3b8] hover:text-white transition-all bg-transparent border-0 p-0 cursor-pointer">
+          <span className="material-symbols-outlined text-lg">logout</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Exit</span>
+        </button>
+      </nav>
     </div>
   );
 }

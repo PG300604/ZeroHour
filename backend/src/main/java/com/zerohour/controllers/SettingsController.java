@@ -73,7 +73,8 @@ public class SettingsController {
         // Validate preference keys — only allow known keys and validate types
         Set<String> allowedKeys = Set.of(
             "emailNudges", "inAppNudges",
-            "nudge24h", "nudge6h", "nudge1h", "timezone"
+            "nudge24h", "nudge6h", "nudge1h", "timezone",
+            "workStartHour", "workEndHour"
         );
         Map<String, Object> sanitized = new HashMap<>();
         for (String key : allowedKeys) {
@@ -85,6 +86,17 @@ public class SettingsController {
                         sanitized.put(key, val);
                     } else {
                         throw new IllegalArgumentException("timezone preference must be a string");
+                    }
+                } else if ("workStartHour".equals(key) || "workEndHour".equals(key)) {
+                    if (val instanceof Number) {
+                        int hour = ((Number) val).intValue();
+                        if (hour >= 0 && hour <= 23) {
+                            sanitized.put(key, hour);
+                        } else {
+                            throw new IllegalArgumentException(key + " must be between 0 and 23");
+                        }
+                    } else {
+                        throw new IllegalArgumentException(key + " preference must be a number");
                     }
                 } else {
                     if (val instanceof Boolean) {
@@ -126,6 +138,8 @@ public class SettingsController {
         defaults.put("nudge6h", true);
         defaults.put("nudge1h", true);
         defaults.put("timezone", "Asia/Kolkata");
+        defaults.put("workStartHour", 9);
+        defaults.put("workEndHour", 21);
         return defaults;
     }
 }

@@ -12,7 +12,8 @@ public class SpaController {
      */
     @RequestMapping(value = {
         "/", "/dashboard", "/panic", "/task/**",
-        "/settings", "/login", "/onboarding"
+        "/settings", "/login", "/onboarding",
+        "/about", "/privacy", "/terms", "/security"
     })
     public String forwardToReact() {
         return "forward:/index.html";

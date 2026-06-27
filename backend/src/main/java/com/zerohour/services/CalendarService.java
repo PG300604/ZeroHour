@@ -28,6 +28,8 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 public class CalendarService {
@@ -132,6 +134,63 @@ public class CalendarService {
     }
 
     /**
+     * Creates a Google Calendar event at a specific time.
+     */
+    public String createCalendarEventAtTime(String userId, Subtask subtask, Task parentTask, ZonedDateTime startZoned, ZonedDateTime endZoned, String calendarId) {
+        User user = firestoreService.getUserById(userId);
+        if (user == null) {
+            log.error("User not found: {}", userId);
+            return null;
+        }
+
+        String decryptedAccessToken = user.getGoogleAccessToken();
+        String calId = calendarId != null && !calendarId.isEmpty() ? calendarId : "primary";
+
+        EventDateTime startEventTime = new EventDateTime()
+                .setDateTime(new DateTime(Date.from(startZoned.toInstant())))
+                .setTimeZone("Asia/Kolkata");
+
+        EventDateTime endEventTime = new EventDateTime()
+                .setDateTime(new DateTime(Date.from(endZoned.toInstant())))
+                .setTimeZone("Asia/Kolkata");
+
+        Event event = new Event()
+                .setSummary("[ZeroHour] " + subtask.getTitle())
+                .setDescription("Auto-scheduled by ZeroHour AI • Task: " + parentTask.getTitle())
+                .setStart(startEventTime)
+                .setEnd(endEventTime)
+                .setColorId("11"); // Red color for urgency
+
+        try {
+            Calendar service = buildCalendarClient(decryptedAccessToken);
+            Event createdEvent = service.events().insert(calId, event).execute();
+            return createdEvent.getId();
+        } catch (com.google.api.client.googleapis.json.GoogleJsonResponseException e) {
+            if (e.getStatusCode() == 401 && user.getGoogleRefreshToken() != null) {
+                log.info("Access token expired for user {}, refreshing...", userId);
+                String newAccessToken = refreshAccessToken(user.getGoogleRefreshToken());
+                if (newAccessToken != null) {
+                    String encryptedAccessToken = firestoreService.encrypt(newAccessToken);
+                    String encryptedRefreshToken = firestoreService.encrypt(user.getGoogleRefreshToken());
+                    firestoreService.updateUserTokens(userId, encryptedAccessToken, encryptedRefreshToken);
+                    try {
+                        Calendar service = buildCalendarClient(newAccessToken);
+                        Event createdEvent = service.events().insert(calId, event).execute();
+                        return createdEvent.getId();
+                    } catch (Exception ex) {
+                        log.error("Retry event creation failed after token refresh", ex);
+                    }
+                }
+            } else {
+                log.error("Google Calendar API error: Status Code {}", e.getStatusCode(), e);
+            }
+        } catch (Exception e) {
+            log.error("Error creating Google Calendar Event", e);
+        }
+        return null;
+    }
+
+    /**
      * Deletes a Google Calendar event by event ID.
      * @param userId        Firestore user UID
      * @param googleEventId The Google Calendar event ID to delete
@@ -202,31 +261,176 @@ public class CalendarService {
 
         List<Subtask> subtasks = firestoreService.getSubtasksByTaskId(taskId);
         List<CalendarEvent> savedEvents = new ArrayList<>();
-        ZonedDateTime startTime = ZonedDateTime.now(ZoneId.of("Asia/Kolkata"));
 
         User user = firestoreService.getUserById(userId);
         String calendarId = user != null && user.getGoogleCalendarId() != null && !user.getGoogleCalendarId().isEmpty() ? 
                 user.getGoogleCalendarId() : "primary";
 
-        for (Subtask subtask : subtasks) {
-            ZonedDateTime endTime = startTime.plusMinutes(subtask.getDurationMinutes());
-            String googleEventId = createCalendarEvent(userId, subtask, parentTask);
+        // Read custom work start/end hours from preferences
+        int workStartHour = 9;
+        int workEndHour = 21;
+        String tz = "Asia/Kolkata";
 
-            if (googleEventId != null) {
-                CalendarEvent event = CalendarEvent.builder()
-                        .googleEventId(googleEventId)
-                        .taskId(taskId)
-                        .startTime(Date.from(startTime.toInstant()))
-                        .endTime(Date.from(endTime.toInstant()))
-                        .calendarId(calendarId)
-                        .build();
-
-                CalendarEvent savedEvent = firestoreService.saveCalendarEvent(event);
-                savedEvents.add(savedEvent);
+        if (user != null && user.getPreferences() != null) {
+            Map<String, Object> prefs = user.getPreferences();
+            if (prefs.containsKey("workStartHour")) {
+                workStartHour = ((Number) prefs.get("workStartHour")).intValue();
             }
-            startTime = endTime;
+            if (prefs.containsKey("workEndHour")) {
+                workEndHour = ((Number) prefs.get("workEndHour")).intValue();
+            }
+            if (prefs.containsKey("timezone")) {
+                tz = (String) prefs.get("timezone");
+            }
+        }
+
+        ZoneId zoneId = ZoneId.of(tz);
+        ZonedDateTime now = ZonedDateTime.now(zoneId);
+        ZonedDateTime deadline = parentTask.getDeadline() != null 
+                ? ZonedDateTime.ofInstant(parentTask.getDeadline().toInstant(), zoneId)
+                : now.plusDays(1);
+
+        // Adjust starting cursor to fit inside work hours
+        ZonedDateTime cursor = now;
+        if (cursor.getHour() >= workEndHour) {
+            // Push to tomorrow morning
+            cursor = cursor.plusDays(1).withHour(workStartHour).withMinute(0).withSecond(0).withNano(0);
+        } else if (cursor.getHour() < workStartHour) {
+            // Start at start hour today
+            cursor = cursor.withHour(workStartHour).withMinute(0).withSecond(0).withNano(0);
+        }
+
+        // Distribute subtasks over available days
+        long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(cursor.toLocalDate(), deadline.toLocalDate());
+        int totalDays = (int) Math.max(1, daysBetween + 1);
+        int subtasksPerDay = (int) Math.ceil((double) subtasks.size() / totalDays);
+
+        int subtaskIndex = 0;
+
+        for (int dayOffset = 0; dayOffset < totalDays && subtaskIndex < subtasks.size(); dayOffset++) {
+            ZonedDateTime dayCursor = cursor.plusDays(dayOffset);
+            if (dayOffset > 0) {
+                dayCursor = dayCursor.withHour(workStartHour).withMinute(0).withSecond(0).withNano(0);
+            }
+
+            for (int i = 0; i < subtasksPerDay && subtaskIndex < subtasks.size(); i++) {
+                Subtask subtask = subtasks.get(subtaskIndex++);
+
+                // Verify cursor is within work window
+                if (dayCursor.getHour() >= workEndHour) {
+                    // Push this and remaining subtasks to tomorrow
+                    subtaskIndex--;
+                    break;
+                }
+
+                ZonedDateTime endTime = dayCursor.plusMinutes(subtask.getDurationMinutes());
+                
+                // Never schedule past task deadline
+                if (endTime.isAfter(deadline)) {
+                    endTime = deadline;
+                    if (dayCursor.isAfter(deadline) || dayCursor.isEqual(deadline)) {
+                        break;
+                    }
+                }
+
+                String googleEventId = createCalendarEventAtTime(userId, subtask, parentTask, dayCursor, endTime, calendarId);
+
+                if (googleEventId != null) {
+                    CalendarEvent event = CalendarEvent.builder()
+                            .googleEventId(googleEventId)
+                            .taskId(taskId)
+                            .startTime(Date.from(dayCursor.toInstant()))
+                            .endTime(Date.from(endTime.toInstant()))
+                            .calendarId(calendarId)
+                            .build();
+
+                    CalendarEvent savedEvent = firestoreService.saveCalendarEvent(event);
+                    savedEvents.add(savedEvent);
+
+                    // Write googleEventId back to subtask
+                    subtask.setGoogleEventId(googleEventId);
+                    firestoreService.saveSubtask(subtask);
+                }
+
+                // Move cursor to next slot (add 10-minute break!)
+                dayCursor = endTime.plusMinutes(10);
+            }
         }
         return savedEvents;
+    }
+
+    /**
+     * Pulls updates from Google Calendar for all scheduled subtasks of a task.
+     * Updates subtask titles, durations, and scheduled dates in Firestore if changed.
+     */
+    public void syncCalendarWithDatabase(String userId, String taskId) {
+        User user = firestoreService.getUserById(userId);
+        if (user == null) return;
+
+        List<CalendarEvent> dbEvents = firestoreService.getCalendarEventsByTaskId(taskId);
+        if (dbEvents == null || dbEvents.isEmpty()) return;
+
+        List<Subtask> subtasks = firestoreService.getSubtasksByTaskId(taskId);
+        String calendarId = user.getGoogleCalendarId() != null && !user.getGoogleCalendarId().isEmpty() ? 
+                user.getGoogleCalendarId() : "primary";
+
+        String decryptedAccessToken = user.getGoogleAccessToken();
+
+        for (CalendarEvent dbEvt : dbEvents) {
+            try {
+                Calendar service = buildCalendarClient(decryptedAccessToken);
+                Event googleEvent = null;
+                try {
+                    googleEvent = service.events().get(calendarId, dbEvt.getGoogleEventId()).execute();
+                } catch (com.google.api.client.googleapis.json.GoogleJsonResponseException e) {
+                    if (e.getStatusCode() == 401 && user.getGoogleRefreshToken() != null) {
+                        String newAccessToken = refreshAccessToken(user.getGoogleRefreshToken());
+                        if (newAccessToken != null) {
+                            service = buildCalendarClient(newAccessToken);
+                            googleEvent = service.events().get(calendarId, dbEvt.getGoogleEventId()).execute();
+                        }
+                    } else if (e.getStatusCode() == 404) {
+                        log.warn("Calendar event {} not found on Google, skipping sync.", dbEvt.getGoogleEventId());
+                        continue;
+                    }
+                }
+
+                if (googleEvent != null) {
+                    DateTime start = googleEvent.getStart().getDateTime();
+                    DateTime end = googleEvent.getEnd().getDateTime();
+                    if (start != null && end != null) {
+                        Date newStart = new Date(start.getValue());
+                        Date newEnd = new Date(end.getValue());
+                        dbEvt.setStartTime(newStart);
+                        dbEvt.setEndTime(newEnd);
+                        firestoreService.saveCalendarEvent(dbEvt);
+
+                        // Find corresponding subtask by matching googleEventId
+                        Subtask matchedSubtask = subtasks.stream()
+                                .filter(s -> dbEvt.getGoogleEventId().equals(s.getGoogleEventId()))
+                                .findFirst()
+                                .orElse(null);
+
+                        if (matchedSubtask != null) {
+                            String summary = googleEvent.getSummary();
+                            if (summary != null) {
+                                if (summary.startsWith("[ZeroHour] ")) {
+                                    summary = summary.substring(11);
+                                }
+                                matchedSubtask.setTitle(summary);
+                            }
+                            long diffMs = newEnd.getTime() - newStart.getTime();
+                            int durationMins = (int) (diffMs / (1000 * 60));
+                            matchedSubtask.setDurationMinutes(durationMins);
+                            
+                            firestoreService.saveSubtask(matchedSubtask);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error syncing calendar event {}", dbEvt.getGoogleEventId(), e);
+            }
+        }
     }
 
     // PRIVATE: Token refresh helper

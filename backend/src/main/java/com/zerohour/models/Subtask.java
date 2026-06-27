@@ -10,12 +10,13 @@ public class Subtask {
     private int orderIndex;
     private String priority; // CRITICAL | HIGH | MEDIUM | LOW
     private String priorityReason;
+    private String googleEventId; // nullable
 
     // Constructors
     public Subtask() {}
 
     public Subtask(String id, String taskId, String panicSessionId, String title, int durationMinutes,
-                   String status, int orderIndex, String priority, String priorityReason) {
+                   String status, int orderIndex, String priority, String priorityReason, String googleEventId) {
         this.id = id;
         this.taskId = taskId;
         this.panicSessionId = panicSessionId;
@@ -25,6 +26,7 @@ public class Subtask {
         this.orderIndex = orderIndex;
         this.priority = priority;
         this.priorityReason = priorityReason;
+        this.googleEventId = googleEventId;
     }
 
     // Getters and Setters
@@ -55,6 +57,9 @@ public class Subtask {
     public String getPriorityReason() { return priorityReason; }
     public void setPriorityReason(String priorityReason) { this.priorityReason = priorityReason; }
 
+    public String getGoogleEventId() { return googleEventId; }
+    public void setGoogleEventId(String googleEventId) { this.googleEventId = googleEventId; }
+
     // Builder Pattern
     public static SubtaskBuilder builder() {
         return new SubtaskBuilder();
@@ -70,6 +75,7 @@ public class Subtask {
         private int orderIndex;
         private String priority;
         private String priorityReason;
+        private String googleEventId;
 
         public SubtaskBuilder id(String id) { this.id = id; return this; }
         public SubtaskBuilder taskId(String taskId) { this.taskId = taskId; return this; }
@@ -80,9 +86,10 @@ public class Subtask {
         public SubtaskBuilder orderIndex(int orderIndex) { this.orderIndex = orderIndex; return this; }
         public SubtaskBuilder priority(String priority) { this.priority = priority; return this; }
         public SubtaskBuilder priorityReason(String priorityReason) { this.priorityReason = priorityReason; return this; }
+        public SubtaskBuilder googleEventId(String googleEventId) { this.googleEventId = googleEventId; return this; }
 
         public Subtask build() {
-            return new Subtask(id, taskId, panicSessionId, title, durationMinutes, status, orderIndex, priority, priorityReason);
+            return new Subtask(id, taskId, panicSessionId, title, durationMinutes, status, orderIndex, priority, priorityReason, googleEventId);
         }
     }
 }

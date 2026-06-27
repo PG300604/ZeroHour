@@ -13,13 +13,14 @@ public class PanicSession {
     private String sseSessionId; // SSE session ID for live agent updates
     private Date createdAt;
     private String title;
+    private String parentTaskId; // nullable, links to existing task for re-planning
 
     // Constructors
     public PanicSession() {}
 
     public PanicSession(String id, String userId, String rawInput, String conversationJson,
                         String generatedPlanJson, boolean confirmed, String status,
-                        String sseSessionId, Date createdAt, String title) {
+                        String sseSessionId, Date createdAt, String title, String parentTaskId) {
         this.id = id;
         this.userId = userId;
         this.rawInput = rawInput;
@@ -30,6 +31,7 @@ public class PanicSession {
         this.sseSessionId = sseSessionId;
         this.createdAt = createdAt;
         this.title = title;
+        this.parentTaskId = parentTaskId;
     }
 
     // Getters and Setters
@@ -63,6 +65,9 @@ public class PanicSession {
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
 
+    public String getParentTaskId() { return parentTaskId; }
+    public void setParentTaskId(String parentTaskId) { this.parentTaskId = parentTaskId; }
+
     // Builder Pattern
     public static PanicSessionBuilder builder() {
         return new PanicSessionBuilder();
@@ -79,6 +84,7 @@ public class PanicSession {
         private String sseSessionId;
         private Date createdAt;
         private String title;
+        private String parentTaskId;
 
         public PanicSessionBuilder id(String id) { this.id = id; return this; }
         public PanicSessionBuilder userId(String userId) { this.userId = userId; return this; }
@@ -90,10 +96,11 @@ public class PanicSession {
         public PanicSessionBuilder sseSessionId(String sseSessionId) { this.sseSessionId = sseSessionId; return this; }
         public PanicSessionBuilder createdAt(Date createdAt) { this.createdAt = createdAt; return this; }
         public PanicSessionBuilder title(String title) { this.title = title; return this; }
+        public PanicSessionBuilder parentTaskId(String parentTaskId) { this.parentTaskId = parentTaskId; return this; }
 
         public PanicSession build() {
             return new PanicSession(id, userId, rawInput, conversationJson, generatedPlanJson,
-                    confirmed, status, sseSessionId, createdAt, title);
+                    confirmed, status, sseSessionId, createdAt, title, parentTaskId);
         }
     }
 }

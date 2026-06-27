@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -49,7 +51,8 @@ public class SecurityConfig {
             )
             .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/login/**", "/oauth2/**", "/assets/**", "/*.html", "/favicon.svg", "/icons.svg", "/*.ico", "/*.png", "/*.svg").permitAll()
+                .requestMatchers("/", "/login/**", "/oauth2/**", "/api/auth/logout").permitAll()
+                .requestMatchers("/about", "/privacy", "/terms", "/security").permitAll()
                 .requestMatchers("/api/auth/**", "/api/tasks/**", "/api/panic/**", "/api/notifications/**", "/api/settings/**", "/api/agents/**").authenticated()
                 .anyRequest().authenticated()
             )
@@ -60,17 +63,20 @@ public class SecurityConfig {
                 .defaultSuccessUrl(frontendUrl + "/dashboard", true)
             )
             .logout(logout -> logout
-                .logoutUrl("/api/auth/logout")
+                .logoutRequestMatcher(new AntPathRequestMatcher("/api/auth/logout"))
                 .logoutSuccessHandler((request, response, authentication) -> {
-                    response.setStatus(200);
-                    response.getWriter().write("{\"status\":\"ok\"}");
-                    response.getWriter().flush();
+                    response.sendRedirect(frontendUrl);
                 })
                 .deleteCookies("JSESSIONID")
                 .invalidateHttpSession(true)
             );
 
         return http.build();
+    }
+
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring().requestMatchers("/assets/**", "/*.html", "/favicon.svg", "/icons.svg", "/*.ico", "/*.png", "/*.svg");
     }
 
     private OAuth2AuthorizationRequestResolver authorizationRequestResolver(

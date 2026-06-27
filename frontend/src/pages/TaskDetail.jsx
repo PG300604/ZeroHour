@@ -33,6 +33,21 @@ export default function TaskDetail() {
   const [sseCompleted, setSseCompleted] = useState(false);
   const [error, setError] = useState(null);
 
+  // Subtask Customization States
+  const [editingSubtaskId, setEditingSubtaskId] = useState(null);
+  const [editSubtaskTitle, setEditSubtaskTitle] = useState('');
+  const [editSubtaskDuration, setEditSubtaskDuration] = useState(30);
+  const [editSubtaskPriority, setEditSubtaskPriority] = useState('MEDIUM');
+
+  // Add Subtask Form State
+  const [showAddSubtask, setShowAddSubtask] = useState(false);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [newSubtaskDuration, setNewSubtaskDuration] = useState(30);
+  const [newSubtaskPriority, setNewSubtaskPriority] = useState('MEDIUM');
+
+  // Sync Calendar State
+  const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
+
   // Set document title
   useEffect(() => {
     document.title = 'ZeroHour — Task Detail';
@@ -157,6 +172,90 @@ export default function TaskDetail() {
       console.error(e);
       setIsConfirming(false);
     }
+  };
+
+  const handleSyncCalendar = async () => {
+    setIsSyncingCalendar(true);
+    try {
+      await api.syncCalendar(id);
+      const data = await api.getTask(id);
+      setTask(data.task);
+      setSubtasks(data.subtasks || []);
+      setCalendarEvents(data.calendarEvents || []);
+      alert('Calendar synchronization completed successfully!');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to sync calendar: ' + e.message);
+    } finally {
+      setIsSyncingCalendar(false);
+    }
+  };
+
+  const handleAddSubtask = async (e) => {
+    e.preventDefault();
+    if (!newSubtaskTitle.trim()) return;
+    try {
+      await api.createSubtask(id, {
+        title: newSubtaskTitle,
+        durationMinutes: parseInt(newSubtaskDuration),
+        priority: newSubtaskPriority
+      });
+      const data = await api.getTask(id);
+      setSubtasks(data.subtasks || []);
+      setTask(data.task);
+      
+      setNewSubtaskTitle('');
+      setNewSubtaskDuration(30);
+      setNewSubtaskPriority('MEDIUM');
+      setShowAddSubtask(false);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add subtask: ' + err.message);
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId) => {
+    if (!window.confirm('Are you sure you want to delete this subtask?')) return;
+    try {
+      await api.deleteSubtask(id, subtaskId);
+      const data = await api.getTask(id);
+      setSubtasks(data.subtasks || []);
+      setCalendarEvents(data.calendarEvents || []);
+      setTask(data.task);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete subtask: ' + err.message);
+    }
+  };
+
+  const handleStartEditSubtask = (subtask) => {
+    setEditingSubtaskId(subtask.id);
+    setEditSubtaskTitle(subtask.title);
+    setEditSubtaskDuration(subtask.durationMinutes);
+    setEditSubtaskPriority(subtask.priority);
+  };
+
+  const handleSaveSubtask = async (subtaskId) => {
+    if (!editSubtaskTitle.trim()) return;
+    try {
+      await api.updateSubtaskDetails(id, subtaskId, {
+        title: editSubtaskTitle,
+        durationMinutes: parseInt(editSubtaskDuration),
+        priority: editSubtaskPriority
+      });
+      setEditingSubtaskId(null);
+      const data = await api.getTask(id);
+      setSubtasks(data.subtasks || []);
+      setTask(data.task);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update subtask: ' + err.message);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('zerohour_onboarded');
+    window.location.href = api.logoutUrl;
   };
 
   const handleDeleteTask = async () => {
@@ -401,6 +500,14 @@ export default function TaskDetail() {
                   <span>{isConfirming ? 'Processing...' : 'Push to Calendar'}</span>
                 </button>
               )}
+
+              <Link 
+                to={`/panic?taskId=${id}`}
+                className="flex items-center gap-2 px-6 py-2.5 bg-[#FF453A]/10 hover:bg-[#FF453A]/20 border border-[#FF453A]/20 text-xs rounded-lg transition-all active:scale-95 text-[#FF453A]"
+              >
+                <span className="material-symbols-outlined text-sm">emergency</span>
+                <span>Trigger Crisis Re-Plan (Panic)</span>
+              </Link>
             </section>
           )}
 
@@ -411,10 +518,77 @@ export default function TaskDetail() {
             <div className="glass-panel p-6 border-white/10 bg-white/2">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-display text-sm font-bold uppercase tracking-wider text-white">Execution Sequence</h3>
-                <span className="font-mono text-[10px] text-[#14B8A6] font-bold">
-                  {percentComplete}% COMPLETE
-                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddSubtask(!showAddSubtask)}
+                    className="flex items-center gap-1 px-3 py-1 bg-white/5 hover:bg-white/10 text-white font-mono text-[9px] rounded-lg border border-white/10 uppercase tracking-widest transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[10px]">add</span>
+                    Add Step
+                  </button>
+                  <span className="font-mono text-[10px] text-[#14B8A6] font-bold">
+                    {percentComplete}% COMPLETE
+                  </span>
+                </div>
               </div>
+
+              {showAddSubtask && (
+                <form onSubmit={handleAddSubtask} className="mb-6 p-4 rounded-xl border border-white/5 bg-white/2 flex flex-col gap-3 animate-fadeIn">
+                  <h4 className="text-[10px] font-mono uppercase tracking-wider text-white font-bold">Add Manual Step</h4>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[8px] font-mono uppercase tracking-widest text-gray-500">Step Title</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Write Introduction Section"
+                      value={newSubtaskTitle}
+                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                      className="input-field py-2 text-xs"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[8px] font-mono uppercase tracking-widest text-gray-500">Duration (Minutes)</label>
+                      <input 
+                        type="number" 
+                        value={newSubtaskDuration}
+                        onChange={(e) => setNewSubtaskDuration(parseInt(e.target.value) || 30)}
+                        className="input-field py-2 text-xs"
+                        min="1"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[8px] font-mono uppercase tracking-widest text-gray-500">Priority</label>
+                      <select 
+                        value={newSubtaskPriority}
+                        onChange={(e) => setNewSubtaskPriority(e.target.value)}
+                        className="input-field py-2 text-xs bg-[#13151a]"
+                      >
+                        <option value="CRITICAL">CRITICAL</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="LOW">LOW</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end mt-1">
+                    <button 
+                      type="button" 
+                      onClick={() => setShowAddSubtask(false)}
+                      className="px-3 py-1.5 rounded-lg bg-white/5 text-[9px] font-mono uppercase tracking-wider text-gray-400 hover:bg-white/10"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      className="px-3 py-1.5 rounded-lg bg-[#14B8A6]/20 border border-[#14B8A6]/30 text-[9px] font-mono uppercase tracking-wider text-[#14B8A6] hover:bg-[#14B8A6]/30 font-bold"
+                    >
+                      Add Step
+                    </button>
+                  </div>
+                </form>
+              )}
               
               {/* Progress bar */}
               <div className="w-full h-1.5 bg-white/5 rounded-full mb-6 overflow-hidden">
@@ -432,10 +606,66 @@ export default function TaskDetail() {
                 ) : (
                   subtasks.map((s) => {
                     const isDone = s.status === 'DONE';
+                    if (editingSubtaskId === s.id) {
+                      return (
+                        <div key={s.id} className="flex flex-col gap-3 p-4 rounded-xl border border-[#14B8A6]/30 bg-white/2 animate-fadeIn">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[8px] font-mono uppercase tracking-widest text-[#14B8A6]">Edit Step Title</label>
+                            <input 
+                              type="text" 
+                              value={editSubtaskTitle}
+                              onChange={(e) => setEditSubtaskTitle(e.target.value)}
+                              className="input-field py-2 text-xs"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[8px] font-mono uppercase tracking-widest text-[#14B8A6]">Duration (Mins)</label>
+                              <input 
+                                type="number" 
+                                value={editSubtaskDuration}
+                                onChange={(e) => setEditSubtaskDuration(parseInt(e.target.value) || 0)}
+                                className="input-field py-2 text-xs"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[8px] font-mono uppercase tracking-widest text-[#14B8A6]">Priority</label>
+                              <select
+                                value={editSubtaskPriority}
+                                onChange={(e) => setEditSubtaskPriority(e.target.value)}
+                                className="input-field py-2 text-xs bg-[#13151a]"
+                              >
+                                <option value="CRITICAL">CRITICAL</option>
+                                <option value="HIGH">HIGH</option>
+                                <option value="MEDIUM">MEDIUM</option>
+                                <option value="LOW">LOW</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 justify-end mt-1">
+                            <button 
+                              type="button"
+                              onClick={() => setEditingSubtaskId(null)}
+                              className="px-3 py-1.5 rounded-lg bg-white/5 text-[9px] font-mono uppercase tracking-wider text-gray-400 hover:bg-white/10"
+                            >
+                              Cancel
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={() => handleSaveSubtask(s.id)}
+                              className="px-3 py-1.5 rounded-lg bg-[#14B8A6]/20 border border-[#14B8A6]/30 text-[9px] font-mono uppercase tracking-wider text-[#14B8A6] hover:bg-[#14B8A6]/30"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return (
-                      <label 
+                      <div 
                         key={s.id} 
-                        className={`flex items-center justify-between p-3.5 rounded-xl border border-white/5 hover:bg-white/2 transition-all cursor-pointer ${
+                        className={`group relative flex items-center justify-between p-3.5 rounded-xl border border-white/5 hover:bg-white/2 transition-all ${
                           isDone ? 'opacity-50' : ''
                         }`}
                       >
@@ -460,8 +690,27 @@ export default function TaskDetail() {
                           }`}>
                             {s.priority}
                           </span>
+                          
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); handleStartEditSubtask(s); }}
+                              className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white flex items-center justify-center"
+                              title="Edit Step"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); handleDeleteSubtask(s.id); }}
+                              className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-[#FF453A] flex items-center justify-center"
+                              title="Delete Step"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">delete</span>
+                            </button>
+                          </div>
                         </div>
-                      </label>
+                      </div>
                     );
                   })
                 )}
@@ -473,9 +722,30 @@ export default function TaskDetail() {
               <div className="absolute top-4 right-4 opacity-5 pointer-events-none">
                 <span className="material-symbols-outlined text-7xl text-white">event_available</span>
               </div>
-              <div className="flex items-center gap-2 mb-4 text-[#14B8A6]">
-                <span className="material-symbols-outlined">calendar_month</span>
-                <h3 className="font-display text-sm font-bold uppercase tracking-wider text-white">Google Calendar Blocks</h3>
+              <div className="flex items-center justify-between gap-2 mb-4 text-[#14B8A6]">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined">calendar_month</span>
+                  <h3 className="font-display text-sm font-bold uppercase tracking-wider text-white">Google Calendar Blocks</h3>
+                </div>
+                {isConfirmed && (
+                  <button
+                    onClick={handleSyncCalendar}
+                    disabled={isSyncingCalendar}
+                    className="flex items-center gap-1 px-3 py-1 bg-white/5 hover:bg-white/10 text-white font-mono text-[9px] rounded-lg border border-white/10 uppercase tracking-widest transition-all"
+                  >
+                    {isSyncingCalendar ? (
+                      <>
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                        Syncing...
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-[10px]">sync</span>
+                        Sync Calendar
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
               
               {isConfirmed ? (
@@ -615,6 +885,30 @@ export default function TaskDetail() {
         </div>
 
       </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[#0D0D0D]/95 backdrop-blur-md border-t border-white/10 z-40 flex justify-around items-center md:hidden px-4 shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
+        <Link to="/dashboard" className="flex flex-col items-center gap-1 text-[#94a3b8] hover:text-white transition-all">
+          <span className="material-symbols-outlined text-lg">dashboard</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Core</span>
+        </Link>
+        <a href="https://calendar.google.com" target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 text-[#94a3b8] hover:text-white transition-all">
+          <span className="material-symbols-outlined text-lg">calendar_today</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Cal</span>
+        </a>
+        <Link to="/panic" className="flex flex-col items-center gap-1 text-[#FF453A] animate-pulse">
+          <span className="material-symbols-outlined text-lg">emergency</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase font-bold">Panic</span>
+        </Link>
+        <Link to="/settings" className="flex flex-col items-center gap-1 text-[#94a3b8] hover:text-white transition-all">
+          <span className="material-symbols-outlined text-lg">settings</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Set</span>
+        </Link>
+        <button onClick={handleLogout} className="flex flex-col items-center gap-1 text-[#94a3b8] hover:text-white transition-all bg-transparent border-0 p-0 cursor-pointer">
+          <span className="material-symbols-outlined text-lg">logout</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Exit</span>
+        </button>
+      </nav>
     </div>
   );
 }

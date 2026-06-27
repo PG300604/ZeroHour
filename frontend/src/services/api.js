@@ -67,6 +67,7 @@ export const api = {
   getMe: () => request('/api/auth/me'),
   logout: () => request('/api/auth/logout', { method: 'POST' }),
   loginUrl: `${API_BASE}/oauth2/authorization/google`,
+  logoutUrl: `${API_BASE}/api/auth/logout`,
 
   // Tasks
   getTasks: () => request('/api/tasks'),
@@ -82,9 +83,17 @@ export const api = {
       method: 'PUT', 
       body: { status } 
     }),
+  updateSubtaskDetails: (taskId, subtaskId, updates) =>
+    request(`/api/tasks/${taskId}/subtasks/${subtaskId}`, {
+      method: 'PUT',
+      body: updates
+    }),
+  syncCalendar: (taskId) => request(`/api/tasks/${taskId}/sync-calendar`, { method: 'POST' }),
+  createSubtask: (taskId, subtask) => request(`/api/tasks/${taskId}/subtasks`, { method: 'POST', body: subtask }),
+  deleteSubtask: (taskId, subtaskId) => request(`/api/tasks/${taskId}/subtasks/${subtaskId}`, { method: 'DELETE' }),
 
   // Panic Mode
-  startPanic: (message, attachment) => request('/api/panic/start', { method: 'POST', body: { message, attachment } }),
+  startPanic: (message, attachment, parentTaskId) => request('/api/panic/start', { method: 'POST', body: { message, attachment, parentTaskId } }),
   replyPanic: (id, message, attachment) => request(`/api/panic/${id}/reply`, { method: 'POST', body: { message, attachment } }),
   editPanicPlan: (id, subtasks) => request(`/api/panic/${id}/edit`, { method: 'POST', body: subtasks }),
   confirmPanicPlan: (id) => request(`/api/panic/${id}/confirm`, { method: 'POST' }),
@@ -97,6 +106,9 @@ export const api = {
   // Notifications
   getNotifications: () => request('/api/notifications'),
   markNotificationRead: (id) => request(`/api/notifications/${id}/read`, { method: 'PUT' }),
+
+  // Onboarding
+  markOnboarded: () => request('/api/settings/onboarded', { method: 'PUT' }),
 
   // SSE Stream URL
   getStreamUrl: (sessionId) => `${API_BASE}/api/agents/stream/${sessionId}`,

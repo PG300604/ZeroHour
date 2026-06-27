@@ -398,6 +398,124 @@ public class TaskController {
         return ResponseEntity.ok(resp);
     }
 
+    @PostMapping("/{id}/sync-calendar")
+    public ResponseEntity<Map<String, String>> syncCalendar(@PathVariable String id) {
+        String userId = authService.getCurrentUserId();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        Task task = firestoreService.getTaskById(id);
+        if (task == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!task.getUserId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        calendarService.syncCalendarWithDatabase(userId, id);
+
+        return ResponseEntity.ok(Map.of("status", "ok"));
+    }
+
+    @PostMapping("/{id}/subtasks")
+    public ResponseEntity<Map<String, Object>> addSubtask(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body) {
+        String userId = authService.getCurrentUserId();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        Task task = firestoreService.getTaskById(id);
+        if (task == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!task.getUserId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        String title = (String) body.get("title");
+        if (title == null || title.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Subtask title is required"));
+        }
+
+        int duration = body.containsKey("durationMinutes") ? ((Number) body.get("durationMinutes")).intValue() : 30;
+        String priority = body.containsKey("priority") ? (String) body.get("priority") : "MEDIUM";
+        
+        // Find highest orderIndex
+        List<Subtask> existing = firestoreService.getSubtasksByTaskId(id);
+        int maxOrder = existing.stream().mapToInt(Subtask::getOrderIndex).max().orElse(-1);
+
+        Subtask subtask = Subtask.builder()
+                .id(UUID.randomUUID().toString())
+                .taskId(id)
+                .title(title)
+                .durationMinutes(duration)
+                .orderIndex(maxOrder + 1)
+                .status("PENDING")
+                .priority(priority)
+                .priorityReason("Manually added by user.")
+                .build();
+
+        firestoreService.saveSubtask(subtask);
+
+        // Update parent task status if it was DONE
+        if ("DONE".equals(task.getStatus())) {
+            task.setStatus("IN_PROGRESS");
+            firestoreService.saveTask(task);
+        }
+
+        return ResponseEntity.ok(Map.of("status", "ok", "subtask", subtask));
+    }
+
+    @DeleteMapping("/{id}/subtasks/{subtaskId}")
+    public ResponseEntity<Map<String, String>> deleteSubtask(
+            @PathVariable String id,
+            @PathVariable String subtaskId) {
+        String userId = authService.getCurrentUserId();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        Task task = firestoreService.getTaskById(id);
+        if (task == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!task.getUserId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Subtask subtask = firestoreService.getSubtaskById(subtaskId);
+        if (subtask == null || !id.equals(subtask.getTaskId())) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Clean up Google Calendar event if scheduled
+        if (subtask.getGoogleEventId() != null && !subtask.getGoogleEventId().isEmpty()) {
+            calendarService.deleteCalendarEvent(userId, subtask.getGoogleEventId());
+        }
+
+        firestoreService.deleteSubtask(subtaskId);
+
+        // Recalculate parent task status based on remaining subtasks
+        List<Subtask> remaining = firestoreService.getSubtasksByTaskId(id);
+        if (remaining.isEmpty()) {
+            task.setStatus("PENDING");
+            firestoreService.saveTask(task);
+        } else {
+            boolean allDone = remaining.stream().allMatch(s -> "DONE".equals(s.getStatus()));
+            boolean allPending = remaining.stream().allMatch(s -> "PENDING".equals(s.getStatus()) || s.getStatus() == null);
+            String newStatus = allDone ? "DONE" : (allPending ? "PENDING" : "IN_PROGRESS");
+            if (!newStatus.equals(task.getStatus())) {
+                task.setStatus(newStatus);
+                firestoreService.saveTask(task);
+            }
+        }
+
+        return ResponseEntity.ok(Map.of("status", "ok"));
+    }
+
     // ─── HELPER METHODS ────────────────────────────────────────────────────
 
     private Date parseDeadline(String deadlineStr) {

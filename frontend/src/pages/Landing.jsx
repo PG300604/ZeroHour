@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import ScrollBackground from '../components/landing/ScrollBackground';
 import { GoogleIcon } from '../components/landing/GoogleButton';
+import { GeminiLogo, CalendarLogo, FirebaseLogo, DriveLogo, GmailLogo, MeetLogo } from '../components/BrandLogos';
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -253,48 +254,48 @@ export default function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-md w-full">
             {/* Gemini */}
             <div className="glass-card p-lg flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-surface-200 transition-colors reveal-on-scroll">
-              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity">
-                <img alt="Gemini AI" className="w-full h-full object-contain" src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Google_Gemini_logo.svg" />
+              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <GeminiLogo />
               </div>
               <span className="font-label-caps text-label-caps">Gemini 1.5 Pro</span>
             </div>
 
             {/* Calendar */}
             <div className="glass-card p-lg flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-surface-200 transition-colors reveal-on-scroll">
-              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity">
-                <img alt="Calendar" className="w-full h-full object-contain" src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" />
+              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <CalendarLogo />
               </div>
               <span className="font-label-caps text-label-caps">Workspace</span>
             </div>
 
             {/* Firebase */}
             <div className="glass-card p-lg flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-surface-200 transition-colors reveal-on-scroll">
-              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity">
-                <img alt="Firebase" className="w-full h-full object-contain" src="https://www.vectorlogo.zone/logos/firebase/firebase-icon.svg" />
+              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <FirebaseLogo />
               </div>
               <span className="font-label-caps text-label-caps">Firebase</span>
             </div>
 
             {/* Drive */}
             <div className="glass-card p-lg flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-surface-200 transition-colors reveal-on-scroll">
-              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity">
-                <img alt="Drive" className="w-full h-full object-contain" src="https://upload.wikimedia.org/wikipedia/commons/e/e0/Google_Drive_icon_%282020%29.svg" />
+              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <DriveLogo />
               </div>
               <span className="font-label-caps text-label-caps">Drive Storage</span>
             </div>
 
             {/* Gmail */}
             <div className="glass-card p-lg flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-surface-200 transition-colors reveal-on-scroll">
-              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity">
-                <img alt="Gmail" className="w-full h-full object-contain" src="https://upload.wikimedia.org/wikipedia/commons/7/7e/Gmail_icon_%282020%29.svg" />
+              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <GmailLogo />
               </div>
               <span className="font-label-caps text-label-caps">Gmail Agent</span>
             </div>
 
             {/* Meet */}
             <div className="glass-card p-lg flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-surface-200 transition-colors reveal-on-scroll">
-              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity">
-                <img alt="Meet" className="w-full h-full object-contain" src="https://upload.wikimedia.org/wikipedia/commons/9/9b/Google_Meet_icon_%282020%29.svg" />
+              <div className="w-10 h-10 mb-md opacity-60 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <MeetLogo />
               </div>
               <span className="font-label-caps text-label-caps">Meet Scribe</span>
             </div>
@@ -482,11 +483,10 @@ export default function Landing() {
             <div className="font-body-md text-body-md text-muted-gray">© 2026 ZeroHour AI. Command your time.</div>
           </div>
           <div className="flex gap-xl flex-wrap justify-center">
-            <a className="text-muted-gray hover:text-on-surface transition-colors font-label-caps text-label-caps" href="#privacy">Privacy</a>
-            <a className="text-muted-gray hover:text-on-surface transition-colors font-label-caps text-label-caps" href="#terms">Terms</a>
-            <a className="text-muted-gray hover:text-on-surface transition-colors font-label-caps text-label-caps" href="#security">Security</a>
-            <a className="text-muted-gray hover:text-on-surface transition-colors font-label-caps text-label-caps" href="https://twitter.com" target="_blank" rel="noreferrer">Twitter</a>
-            <a className="text-muted-gray hover:text-on-surface transition-colors font-label-caps text-label-caps" href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
+            <Link className="text-muted-gray hover:text-on-surface transition-colors font-label-caps text-label-caps" to="/about">About Us</Link>
+            <Link className="text-muted-gray hover:text-on-surface transition-colors font-label-caps text-label-caps" to="/privacy">Privacy</Link>
+            <Link className="text-muted-gray hover:text-on-surface transition-colors font-label-caps text-label-caps" to="/terms">Terms</Link>
+            <Link className="text-muted-gray hover:text-on-surface transition-colors font-label-caps text-label-caps" to="/security">Security</Link>
           </div>
         </div>
       </footer>

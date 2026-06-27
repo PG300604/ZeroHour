@@ -101,13 +101,9 @@ export default function Dashboard() {
     return () => connection.close();
   }, [activeSessionId, fetchUserDataAndTasks]);
 
-  const handleLogout = async () => {
-    try {
-      await api.logout();
-      navigate('/');
-    } catch (e) {
-      console.error(e);
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('zerohour_onboarded');
+    window.location.href = api.logoutUrl;
   };
 
   const handleCreateTask = async (e) => {
@@ -485,15 +481,29 @@ export default function Dashboard() {
 
       </main>
 
-      {/* Mobile Panic FAB */}
-      <button
-        onClick={() => navigate('/panic')}
-        className="fixed bottom-6 right-6 z-50 md:hidden bg-[#FF453A] text-white w-14 h-14 rounded-full shadow-lg shadow-red-950/50 text-2xl flex items-center justify-center animate-pulse border border-white/10"
-        style={{ boxShadow: '0 0 20px rgba(255, 69, 58, 0.5)' }}
-        title="Activate Panic Mode"
-      >
-        🚨
-      </button>
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[#0D0D0D]/95 backdrop-blur-md border-t border-white/10 z-40 flex justify-around items-center md:hidden px-4 shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
+        <Link to="/dashboard" className="flex flex-col items-center gap-1 text-[#14B8A6] transition-all">
+          <span className="material-symbols-outlined text-lg">dashboard</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Core</span>
+        </Link>
+        <a href="https://calendar.google.com" target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 text-[#94a3b8] hover:text-white transition-all">
+          <span className="material-symbols-outlined text-lg">calendar_today</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Cal</span>
+        </a>
+        <Link to="/panic" className="flex flex-col items-center gap-1 text-[#FF453A] animate-pulse">
+          <span className="material-symbols-outlined text-lg">emergency</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase font-bold">Panic</span>
+        </Link>
+        <Link to="/settings" className="flex flex-col items-center gap-1 text-[#94a3b8] hover:text-white transition-all">
+          <span className="material-symbols-outlined text-lg">settings</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Set</span>
+        </Link>
+        <button onClick={handleLogout} className="flex flex-col items-center gap-1 text-[#94a3b8] hover:text-white transition-all bg-transparent border-0 p-0 cursor-pointer">
+          <span className="material-symbols-outlined text-lg">logout</span>
+          <span className="text-[8px] font-mono tracking-widest uppercase">Exit</span>
+        </button>
+      </nav>
     </div>
   );
 }

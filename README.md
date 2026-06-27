@@ -35,18 +35,25 @@ When users face a sudden crunch, **Panic Mode** acts as their virtual Chief of S
 *   **Multimodal Attachment Analysis**: Upload syllabi, PDFs, or photos of assignments. ZeroHour's multimodal Gemini engine processes the content to extract milestones and deadlines instantly.
 *   **Gemini-Style History Sidebar**: Manage past crisis conversations. Easily create new chats, reload history, rename sessions inline, or delete logs.
 *   **Real-Time Agent Streams**: Watch the agents think, plan, and schedule live through Server-Sent Events (SSE).
+*   **Task Crisis Overwrite**: Trigger Panic Mode on an existing task to overwrite its subtasks and calendar events automatically rather than creating duplicates.
 
 ---
 
-## 🛠️ Technology Stack
-*   **Frontend**: React (JS), Tailwind CSS (Vanilla styling), Vite, Server-Sent Events.
-*   **Backend**: Java Spring Boot, Spring Security (OAuth2 with Google OIDC), WebFlux (Reactive Streams).
-*   **Database & Auth**: Firebase Firestore (NoSQL cloud persistence), Google Firebase Admin SDK.
-*   **Hosting**: Google Firebase Hosting (Frontend), Railway (Docker-based Backend).
+## 🆕 Pacing, Personalization & CRUD Customization
+We introduced deep customization and flexible calendar pacing:
+*   **30-Day Session Persistence**: Hardened session cookie max-age to 30 days so users remain logged in across browser sessions.
+*   **Custom Work/Focus Hours**: Define custom sleep/wake hours on the Settings page to restrict scheduling to your active window.
+*   **Smart Calendar Pacing & Breaks**: Spacers distribute task blocks evenly over days, inject **10-minute breaks** between consecutive blocks, and shift late-night tasks to the next morning.
+*   **Two-Way Calendar Pull-Sync**: Click the "Sync Calendar" button on any task details page to fetch latest titles and timings directly from Google Calendar.
+*   **Manual Subtask CRUD**: Add, edit, or delete plan milestones manually with automatic parent task status and progress recalculations.
+*   **Mobile Bottom Navigation Bar**: SLEEK native bottom navigation bar for mobile screens, giving quick access to Core, Calendar, Panic, Settings, and Exit controls.
 
 ---
 
 ## 🛡️ Security Hardening & Best Practices
+*   **CORS/Adblock Immune Brand Logos**: Logos for Gemini, Calendar, Firebase, Drive, Gmail, and Meet are embedded as inline vector SVGs to prevent browser-level network blocking.
+*   **Public Legal Routes**: Registered public React Router paths `/about`, `/privacy`, `/terms`, and `/security` with matching WebSecurity customizers.
+*   **Bypassed Third-Party Cookie Redirect Logout Loop**: Implemented a robust direct GET/POST redirect logout handler to prevent CORS/CSRF blockages on session invalidations.
 *   **CSRF Protection**: Spring Security generates double-submitted CSRF tokens stored in a secure cookie (`XSRF-TOKEN`) and validated on all mutating requests.
 *   **IDOR Mitigation**: Added resource ownership validation checks on all REST endpoints (e.g. notifications and task updates).
 *   **Native JNI Alpine Segfault Fix**: Switched JRE base images to standard glibc Debian JRE to resolve `netty-tcnative` JNI segmentation faults.
