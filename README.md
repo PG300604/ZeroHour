@@ -52,9 +52,12 @@ We introduced deep customization and flexible calendar pacing:
 
 ## 🛡️ Security Hardening & Best Practices
 *   **CORS/Adblock Immune Brand Logos**: Logos for Gemini, Calendar, Firebase, Drive, Gmail, and Meet are embedded as inline vector SVGs to prevent browser-level network blocking.
+*   **Programmatic CORS Wildcard Origin Patterns**: Enforces allowed origin patterns (`*`) in Spring Security while keeping credentials enabled, resolving cross-domain preflight blockages on mobile and desktop devices.
+*   **50MB Request Payload Ingestion**: Configured Tomcat and Spring servlet parameters to accept up to 50MB PDF/image syllabus uploads.
+*   **Automatic Fallback API Resolution**: Integrated automatic Railway URL API fallback in the frontend `api.js` to ensure production calls resolve correctly regardless of compilation environment variables.
 *   **Public Legal Routes**: Registered public React Router paths `/about`, `/privacy`, `/terms`, and `/security` with matching WebSecurity customizers.
 *   **Bypassed Third-Party Cookie Redirect Logout Loop**: Implemented a robust direct GET/POST redirect logout handler to prevent CORS/CSRF blockages on session invalidations.
-*   **CSRF Protection**: Spring Security generates double-submitted CSRF tokens stored in a secure cookie (`XSRF-TOKEN`) and validated on all mutating requests.
+*   **CSRF Protection**: Spring Security generates double-submitted CSRF tokens stored in a secure cookie (`XSRF-TOKEN`) and validated on all mutating requests (disabled in production cross-domain mode for seamless API integration).
 *   **IDOR Mitigation**: Added resource ownership validation checks on all REST endpoints (e.g. notifications and task updates).
 *   **Native JNI Alpine Segfault Fix**: Switched JRE base images to standard glibc Debian JRE to resolve `netty-tcnative` JNI segmentation faults.
 
