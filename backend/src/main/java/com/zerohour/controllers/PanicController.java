@@ -614,57 +614,21 @@ public class PanicController {
         int totalMinutes = subtasks.stream().mapToInt(Subtask::getDurationMinutes).sum();
         Date deadline = new Date(System.currentTimeMillis() + (long) totalMinutes * 60 * 1000);
 
-        // 2. Reuse parentTask or create a permanent Task in user's Dashboard
-        Task task;
-        if (session.getParentTaskId() != null && !session.getParentTaskId().isEmpty()) {
-            task = firestoreService.getTaskById(session.getParentTaskId());
-            if (task != null) {
-                // Delete old Google Calendar events to avoid clutter
-                List<CalendarEvent> oldEvents = firestoreService.getCalendarEventsByTaskId(task.getId());
-                for (CalendarEvent oldEvt : oldEvents) {
-                    if (oldEvt.getGoogleEventId() != null) {
-                        calendarService.deleteCalendarEvent(userId, oldEvt.getGoogleEventId());
-                    }
-                }
-                
-                // Clear old subtasks and calendar records in DB
-                firestoreService.deleteSubtasksByTaskId(task.getId());
-                firestoreService.deleteCalendarEventsByTaskId(task.getId());
-                
-                // Keep the existing task but mark priority as CRITICAL due to crisis
-                task.setPriority("CRITICAL");
-                task.setStatus("PENDING");
-                firestoreService.saveTask(task);
-            } else {
-                task = Task.builder()
-                        .id(UUID.randomUUID().toString())
-                        .userId(userId)
-                        .title(session.getRawInput().length() > 60
-                                ? session.getRawInput().substring(0, 57) + "..."
-                                : session.getRawInput())
-                        .description("Generated via Panic Mode session " + session.getId())
-                        .status("PENDING")
-                        .priority("CRITICAL")
-                        .deadline(deadline)
-                        .createdAt(new Date())
-                        .build();
-                firestoreService.saveTask(task);
-            }
-        } else {
-            task = Task.builder()
-                    .id(UUID.randomUUID().toString())
-                    .userId(userId)
-                    .title(session.getRawInput().length() > 60
-                            ? session.getRawInput().substring(0, 57) + "..."
-                            : session.getRawInput())
-                    .description("Generated via Panic Mode session " + session.getId())
-                    .status("PENDING")
-                    .priority("CRITICAL")
-                    .deadline(deadline)
-                    .createdAt(new Date())
-                    .build();
-            firestoreService.saveTask(task);
-        }
+        // 2. Create a permanent Task in user's Dashboard
+        Task task = Task.builder()
+                .id(UUID.randomUUID().toString())
+                .userId(userId)
+                .title(session.getRawInput().length() > 60
+                        ? session.getRawInput().substring(0, 57) + "..."
+                        : session.getRawInput())
+                .description("Generated via Panic Mode session " + session.getId())
+                .status("PENDING")
+                .priority("CRITICAL")
+                .deadline(deadline)
+                .createdAt(new Date())
+                .build();
+
+        firestoreService.saveTask(task);
 
         // 3. Associate subtasks with the permanent Task and save them
         for (Subtask s : subtasks) {

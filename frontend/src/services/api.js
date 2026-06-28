@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8080' : '');
+const API_BASE = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'https://mindful-nourishment-production-3ec0.up.railway.app');
 
 function getCookie(name) {
   const value = `; ${document.cookie}`;
