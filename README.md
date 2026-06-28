@@ -1,6 +1,6 @@
 # ⏰ ZeroHour — Multi-Agent AI Productivity Companion
 
-**ZeroHour** is a premium, multi-agent AI task management and crisis-response companion built for the **Vibe2Ship Hackathon (CodingNingasXGoogle)**. It helps professionals, students, and developers navigate tight deadlines, manage task priorities, sync with Google Calendar, and resolve time-crunches through an interactive, multimodal **Panic Mode**.
+**ZeroHour** is a premium, multi-agent AI task management and crisis-response companion built for the **Vibe2Ship Hackathon (CodingNinjasXGoogle)**. It helps professionals, students, and developers navigate tight deadlines, manage task priorities, sync with Google Calendar, and resolve time-crunches through an interactive, multimodal **Panic Mode**.
 
 ---
 
