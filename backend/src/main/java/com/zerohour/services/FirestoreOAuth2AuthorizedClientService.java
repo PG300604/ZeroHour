@@ -82,8 +82,17 @@ public class FirestoreOAuth2AuthorizedClientService implements OAuth2AuthorizedC
 
         if (principal instanceof OAuth2AuthenticationToken) {
             OAuth2User oauth2User = ((OAuth2AuthenticationToken) principal).getPrincipal();
+            String email = (String) oauth2User.getAttributes().get("email");
+            String allowedEmail = System.getenv("ALLOWED_USER_EMAIL");
+            if (allowedEmail == null || allowedEmail.trim().isEmpty()) {
+                allowedEmail = "aecpriyanshughoshcsbs@gmail.com";
+            }
+            if (email == null || !email.trim().equalsIgnoreCase(allowedEmail.trim())) {
+                throw new SecurityException("Access denied: " + email + " is not authorized to log into this instance.");
+            }
+            
             if (oauth2User.getAttributes().containsKey("email")) {
-                existing.setEmail((String) oauth2User.getAttributes().get("email"));
+                existing.setEmail(email);
             }
             if (oauth2User.getAttributes().containsKey("name")) {
                 existing.setDisplayName((String) oauth2User.getAttributes().get("name"));
