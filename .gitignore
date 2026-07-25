@@ -17,11 +17,24 @@ backend/.factorypath
 *.log
 backend/hs_err_pid*.log
 
-# Sensitive Files / Keys (Crucial)
-backend/src/main/resources/firebase-service-account.json
+# Sensitive Files / Keys (Crucial Security Exclusions)
+*.env
+*.env.*
+!.env.template
+!backend/.env.template
 firebase-b64.txt
-.env
+backend/src/main/resources/firebase-service-account.json
+secrets.json
+.zerohour_backup/
+*.pem
+*.key
+*.p12
+*.jks
+
+# Launcher & Local Scripts
+run_dev.ps1
 
 # OS Files
 .DS_Store
 Thumbs.db
+
