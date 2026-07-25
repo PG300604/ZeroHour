@@ -1,6 +1,7 @@
-# Compiled class files
+# Compiled class files & build caches
 backend/target/
 frontend/dist/
+.firebase/
 
 # Dependencies
 frontend/node_modules/
