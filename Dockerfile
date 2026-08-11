@@ -10,15 +10,12 @@ RUN npm run build
 FROM maven:3.9.6-eclipse-temurin-17 AS backend-build
 WORKDIR /app
 COPY backend/pom.xml ./pom.xml
-RUN mvn dependency:go-offline -B
-
-# Copy backend source
 COPY backend/src ./src
 
 # Copy built frontend assets from Stage 1 into backend static resources
 COPY --from=frontend-build /frontend/dist ./src/main/resources/static
 
-# Package jar
+# Package jar without running tests
 RUN mvn clean package -DskipTests -B
 
 # ── Stage 3: Runtime ────────────────────────────────────────────────────────
@@ -32,10 +29,7 @@ USER zerohour
 # Copy JAR from build stage
 COPY --from=backend-build /app/target/zerohour-*.jar app.jar
 
-# Expose port
-EXPOSE 8080
-
-# JVM tuning
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
+# JVM tuning for 512MB RAM container limits on Render
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=65.0 -XX:MaxMetaspaceSize=160m -Djava.security.egd=file:/dev/./urandom"
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
