@@ -6,7 +6,8 @@
 
 ## 🚀 Live Production Links
 *   🌐 **Deployable Link (Hosted on Google Cloud)**: [https://zerohour-a84d3.web.app](https://zerohour-a84d3.web.app)
-*   ⚙️ **Backend API (Hosted on Railway)**: `https://mindful-nourishment-production-3ec0.up.railway.app`
+*   ⚙️ **Backend API (Hosted on Render - Lifetime Free)**: `https://zerohour-backend.onrender.com`
+*   📖 **Render Deployment Guide**: See [RENDER_DEPLOY.md](RENDER_DEPLOY.md)
 
 ---
 
