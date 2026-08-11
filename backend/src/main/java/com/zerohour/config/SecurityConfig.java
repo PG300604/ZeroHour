@@ -3,7 +3,6 @@ package com.zerohour.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -12,21 +11,11 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -47,21 +36,31 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/login/**", "/oauth2/**", "/api/auth/logout").permitAll()
+                .requestMatchers("/", "/index.html", "/login/**", "/oauth2/**", "/api/auth/logout").permitAll()
                 .requestMatchers("/about", "/privacy", "/terms", "/security").permitAll()
-                .requestMatchers("/api/auth/**", "/api/tasks/**", "/api/panic/**", "/api/notifications/**", "/api/settings/**", "/api/agents/**").authenticated()
-                .anyRequest().authenticated()
+                .requestMatchers("/dashboard", "/panic", "/task/**", "/settings", "/onboarding").permitAll()
+                .requestMatchers("/assets/**", "/*.svg", "/*.ico", "/*.png", "/*.js", "/*.css").permitAll()
+                .requestMatchers("/api/auth/me").authenticated()
+                .requestMatchers("/api/tasks/**", "/api/panic/**", "/api/notifications/**", "/api/settings/**", "/api/agents/**").authenticated()
+                .anyRequest().permitAll()
             )
             .oauth2Login(oauth2 -> oauth2
                 .authorizationEndpoint(authorization -> authorization
                     .authorizationRequestResolver(authorizationRequestResolver(clientRegistrationRepository))
                 )
-                .defaultSuccessUrl(frontendUrl + "/dashboard", true)
+                .successHandler((request, response, authentication) -> {
+                    String referer = request.getHeader("Referer");
+                    String targetUrl = "/dashboard";
+                    if (frontendUrl != null && !frontendUrl.isEmpty() && referer != null && referer.startsWith(frontendUrl) && !referer.contains("onrender.com")) {
+                        targetUrl = frontendUrl + "/dashboard";
+                    }
+                    response.sendRedirect(targetUrl);
+                })
             )
             .logout(logout -> logout
                 .logoutRequestMatcher(new AntPathRequestMatcher("/api/auth/logout"))
                 .logoutSuccessHandler((request, response, authentication) -> {
-                    response.sendRedirect(frontendUrl);
+                    response.sendRedirect("/");
                 })
                 .deleteCookies("JSESSIONID")
                 .invalidateHttpSession(true)
@@ -100,17 +99,5 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
-    }
-
-    private static final class CsrfCookieFilter extends OncePerRequestFilter {
-        @Override
-        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-                throws ServletException, IOException {
-            CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-            if (csrfToken != null) {
-                csrfToken.getToken();
-            }
-            filterChain.doFilter(request, response);
-        }
     }
 }
